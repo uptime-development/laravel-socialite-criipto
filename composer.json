@@ -1,0 +1,43 @@
+{
+    "name": "uptime-development/laravel-socialite-criipto",
+    "description": "A custom Criipto driver for Laravel Socialite",
+    "minimum-stability": "stable",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Anders Andersen",
+            "email": "anders.andersen@uptimedevelopment.dk"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "UptimeDevelopment\\SocialiteCriipto\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "UptimeDevelopment\\SocialiteCriipto\\Tests\\": "tests"
+        }
+    },
+    "require": {
+        "php": "^7.3|^8.0",
+        "laravel/socialite": "^5.2",
+        "codercat/jwk-to-pem": "^1.1",
+        "firebase/php-jwt": "^5.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "orchestra/testbench": "^6.18",
+        "nunomaduro/collision": "^5.3"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "UptimeDevelopment\\SocialiteCriipto\\SocialiteCriiptoServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "./vendor/bin/testbench package:test --no-coverage"
+    }
+}
