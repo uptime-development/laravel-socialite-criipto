@@ -10,7 +10,6 @@ use CoderCat\JWKToPEM\JWKConverter;
 use Exception;
 use Firebase\JWT\JWT;
 use GuzzleHttp\Exception\ClientException;
-use Illuminate\Support\Facades\Cache;
 
 class SocialiteCriiptoProvider extends AbstractProvider
 {
@@ -23,7 +22,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
      * @var string[]
      */
     protected $scopes = [
-        'openid'        
+        'openid'
     ];
 
     /**
@@ -59,7 +58,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
 
         $user = $this->mapUserToObject($this->getUserByToken(
             $token = $this->parseIdToken($response)
-        ));      
+        ));
 
         session(['socialite_' . self::IDENTIFIER . '_idtoken' => $token]);
 
@@ -88,7 +87,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
     {
         $response = $this->getHttpClient()->post($this->getTokenUrl(), [
             'headers' => [
-                'Accept' => 'application/x-www-form-urlencoded', 
+                'Accept' => 'application/x-www-form-urlencoded',
                 'Authorization' => 'Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret)
             ],
             'form_params' => $this->getTokenFields($code),
@@ -117,33 +116,28 @@ class SocialiteCriiptoProvider extends AbstractProvider
      * @return array
      */
     private function getJWTKeys() {
-        return Cache::remember('socialite_' . self::IDENTIFIER . '_jwtpublickeys', config('services.criipto.cache_time'), function () {           
-            $response = $this->getHttpClient()->get($this->getOpenIdConfiguration()->jwks_uri);
-            $jwks = json_decode($response->getBody(), true);
-            $public_keys = array();
-            foreach ($jwks['keys'] as $jwk) {       
-                $jwkConverter = new JWKConverter();         
-                $public_keys[$jwk['kid']] = $jwkConverter->toPEM($jwk);
-            }
-            return $public_keys;
-        });
+        $response = $this->getHttpClient()->get($this->getOpenIdConfiguration()->jwks_uri);
+        $jwks = json_decode($response->getBody(), true);
+        $public_keys = array();
+        foreach ($jwks['keys'] as $jwk) {
+            $jwkConverter = new JWKConverter();
+            $public_keys[$jwk['kid']] = $jwkConverter->toPEM($jwk);
+        }
+        return $public_keys;
     }
 
     /**
-     * Get the OpenID configuration from criipto     
+     * Get the OpenID configuration from criipto
      */
-    private function getOpenIdConfiguration() 
+    private function getOpenIdConfiguration()
     {
-        return Cache::remember('socialite_' . self::IDENTIFIER . '_openidconfiguration', config('services.criipto.cache_time'), function () {         
-            try {
-                $response = $this->getHttpClient()->get(config('services.criipto.base_uri') . '/.well-known/openid-configuration', ['http_errors' => true]);
-            } catch(ClientException $e) {
-                throw new Exception("Unable to read the OpenID configuration. Make sure the base_uri is set correctly");
-            }
+        try {
+            $response = $this->getHttpClient()->get(config('services.criipto.base_uri') . '/.well-known/openid-configuration', ['http_errors' => true]);
+        } catch(ClientException $e) {
+            throw new Exception("Unable to read the OpenID configuration. Make sure the base_uri is set correctly");
+        }
 
-
-            return json_decode($response->getBody());
-        });
+        return json_decode($response->getBody());
     }
 
     /**
@@ -153,7 +147,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
     {
         //We only return the common fields. All other fields can be found in 'user'
         return (new User())->setRaw($user)->map([
-            'id' => $user['sub']  
+            'id' => $user['sub']
         ]);
     }
 
@@ -167,13 +161,13 @@ class SocialiteCriiptoProvider extends AbstractProvider
     {
         $fields = [
             'grant_type' => 'authorization_code',
-            'client_id' => $this->clientId,            
+            'client_id' => $this->clientId,
             'code' => $code,
             'redirect_uri' => $this->redirectUrl,
-        ];        
+        ];
 
         return $fields;
-    }    
+    }
 
     /**
      * Add additional required config items
