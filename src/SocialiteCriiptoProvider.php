@@ -2,6 +2,8 @@
 
 namespace UptimeDevelopment\SocialiteCriipto;
 
+use Firebase\JWT\JWK;
+use Firebase\JWT\Key;
 use Laravel\Socialite\Two\User;
 use Illuminate\Support\Arr;
 use Laravel\Socialite\Two\AbstractProvider;
@@ -13,7 +15,7 @@ use GuzzleHttp\Exception\ClientException;
 
 class SocialiteCriiptoProvider extends AbstractProvider
 {
-     /**
+    /**
      * Unique Provider Identifier.
      */
     const IDENTIFIER = 'criipto';
@@ -56,9 +58,11 @@ class SocialiteCriiptoProvider extends AbstractProvider
         $response = $this->getAccessTokenResponse($this->getCode());
         $this->credentialsResponseBody = $response;
 
-        $user = $this->mapUserToObject($this->getUserByToken(
-            $token = $this->parseIdToken($response)
-        ));
+        $user = $this->mapUserToObject(
+            $this->getUserByToken(
+                $token = $this->parseIdToken($response)
+            )
+        );
 
         session(['socialite_' . self::IDENTIFIER . '_idtoken' => $token]);
 
@@ -80,7 +84,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
     /**
      * Get the access token response for the given code.
      *
-     * @param  string  $code
+     * @param string $code
      * @return array
      */
     public function getAccessTokenResponse($code)
@@ -99,7 +103,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
     /**
      * Get the raw user for the given id token.
      *
-     * @param  string  $token
+     * @param string $token
      * @return array
      */
     protected function getUserByToken($token)
@@ -107,7 +111,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
         // Reading public keys from criipto for validating the JWT token
         $keys = $this->getJWTKeys();
 
-        return (array) JWT::decode($token, $keys, $this->getOpenIdConfiguration()->id_token_signing_alg_values_supported);
+        return (array)JWT::decode($token, $keys);
     }
 
     /**
@@ -115,13 +119,13 @@ class SocialiteCriiptoProvider extends AbstractProvider
      *
      * @return array
      */
-    private function getJWTKeys() {
+    private function getJWTKeys()
+    {
         $response = $this->getHttpClient()->get($this->getOpenIdConfiguration()->jwks_uri);
         $jwks = json_decode($response->getBody(), true);
-        $public_keys = array();
+        $public_keys = [];
         foreach ($jwks['keys'] as $jwk) {
-            $jwkConverter = new JWKConverter();
-            $public_keys[$jwk['kid']] = $jwkConverter->toPEM($jwk);
+            $public_keys[$jwk['kid']] = JWK::parseKey($jwk,  $this->getOpenIdConfiguration()->id_token_signing_alg_values_supported[0] ?? 'RS256');
         }
         return $public_keys;
     }
@@ -133,8 +137,8 @@ class SocialiteCriiptoProvider extends AbstractProvider
     {
         try {
             $response = $this->getHttpClient()->get(config('services.criipto.base_uri') . '/.well-known/openid-configuration', ['http_errors' => true]);
-        } catch(ClientException $e) {
-            throw new Exception("Unable to read the OpenID configuration. Make sure the base_uri is set correctly");
+        } catch (ClientException $e) {
+            throw new Exception('Unable to read the OpenID configuration. Make sure the base_uri is set correctly');
         }
 
         return json_decode($response->getBody());
@@ -154,7 +158,7 @@ class SocialiteCriiptoProvider extends AbstractProvider
     /**
      * Get the POST fields for the token request.
      *
-     * @param  string  $code
+     * @param string $code
      * @return array
      */
     protected function getTokenFields($code)
@@ -186,10 +190,17 @@ class SocialiteCriiptoProvider extends AbstractProvider
      * @param [type] $user
      * @return void
      */
-    public function logOut($guard, $user) {
+    public function logOut($guard, $user)
+    {
         $idToken = session('socialite_' . self::IDENTIFIER . '_idtoken');
         if (!empty($idToken)) {
-            abort(redirect($this->getOpenIdConfiguration()->end_session_endpoint . "?id_token_hint=" . $idToken . "&post_logout_redirect_uri=" . urlencode($this->config['redirect_logout'] ?: request()->fullUrl())));
+            abort(
+                redirect(
+                    $this->getOpenIdConfiguration()->end_session_endpoint . '?id_token_hint=' . $idToken . '&post_logout_redirect_uri=' . urlencode(
+                        $this->config['redirect_logout'] ?: request()->fullUrl()
+                    )
+                )
+            );
         }
     }
 }
